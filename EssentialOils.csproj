@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>EssentialOils</RootNamespace>
+    <AssemblyName>EssentialOils</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Resources\Icon1.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Speech" Version="9.0.0" />
+  </ItemGroup>
+
+  <!-- Data + image assets are copied next to the executable and loaded at runtime. -->
+  <ItemGroup>
+    <None Update="oils.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Resources\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Resources\*.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
