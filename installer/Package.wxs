@@ -6,7 +6,7 @@
   - Version comes from build.ps1 (-d Version=...); the default below is just a fallback.
   - Files harvests the entire self-contained publish folder.
 -->
-<?ifndef Version ?><?define Version = "1.0.0" ?><?endif?>
+<?ifndef Version ?><?define Version = "1.0.1" ?><?endif?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="Essential Oil Mixer"
            Manufacturer="Michael Potter"

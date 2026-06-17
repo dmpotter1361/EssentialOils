@@ -16,7 +16,12 @@ public sealed class ResearchForm : Form
 
     public ResearchForm(string oilName, string description)
     {
+        // oils.json stores descriptions with LF line endings; a classic multiline
+        // TextBox only renders CRLF, so normalise everything to CRLF before display.
+        description = description.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
+
         Text = oilName;
+        AutoScaleMode = AutoScaleMode.Dpi;
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(756, 496);
         MinimumSize = new Size(772, 535);

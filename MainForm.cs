@@ -52,57 +52,70 @@ public sealed class MainForm : Form
     private void BuildLayout()
     {
         Text = "Essential Oil Mixer";
-        FormBorderStyle = FormBorderStyle.Fixed3D;
+        // Scale by DPI (not the system font) and let the form size itself to the
+        // layout, so it stays correct under any display-scale / text-size setting.
+        AutoScaleMode = AutoScaleMode.Dpi;
+        FormBorderStyle = FormBorderStyle.FixedSingle;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(882, 546);
+        AutoSize = true;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
         MaximizeBox = false;
         TryLoadIcon();
 
-        // Research toggles (they double as the column headers).
-        Place(_researchCarrier, 10, 9, 150, 54);
-        Place(_researchTop, 168, 9, 151, 54);
-        Place(_researchMid, 325, 9, 151, 54);
-        Place(_researchBase, 482, 9, 151, 54);
-        Place(_createBtn, 639, 9, 231, 54);
-
-        // List boxes.
-        Place(_carrierList, 10, 69, 151, 340);
-        Place(_topList, 168, 69, 151, 340);
-        Place(_midList, 325, 69, 151, 340);
-        Place(_baseList, 482, 69, 151, 340);
-        Place(_recipeBox, 639, 69, 231, 413);
-
-        Place(_bottleList, 10, 429, 150, 109);
-
-        // Fragrance family labels (Panel1).
-        var familyPanel = new Panel { Location = new Point(168, 429), Size = new Size(465, 48) };
-        int[] familyX = [51, 122, 193, 264, 335];
-        for (int i = 0; i < OilCatalog.Families.Count; i++)
+        // Everything lives in one auto-sizing grid: 5 columns (carrier / top /
+        // middle / base / recipe) over 3 rows (headers, lists, bottom strip).
+        // Children Dock-fill their cells, so the whole thing reflows cleanly when
+        // WinForms scales the absolute column/row sizes for the monitor's DPI.
+        var root = new TableLayoutPanel
         {
-            string family = OilCatalog.Families[i];
-            var lbl = NewCategoryLabel(family, familyX[i], 12, 71);
-            _familyLabels[family] = lbl;
-            familyPanel.Controls.Add(lbl);
-        }
-        Controls.Add(familyPanel);
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 5,
+            RowCount = 3,
+            Padding = new Padding(8),
+        };
+        for (int i = 0; i < 4; i++) root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 156));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 246));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));    // headers
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 330));   // lists / recipe
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 136));   // bottom strip
 
-        // Effect labels (Panel2).
-        var effectPanel = new Panel { Location = new Point(168, 483), Size = new Size(465, 55) };
-        int[] effectX = [45, 139, 233, 327];
-        for (int i = 0; i < OilCatalog.Effects.Count; i++)
+        // Row 0 — research toggles (they double as the column headers) + Create.
+        AddCell(root, _researchCarrier, 0, 0);
+        AddCell(root, _researchTop, 1, 0);
+        AddCell(root, _researchMid, 2, 0);
+        AddCell(root, _researchBase, 3, 0);
+        AddCell(root, _createBtn, 4, 0);
+
+        // Row 1 — the four oil lists + the recipe box.
+        AddCell(root, _carrierList, 0, 1);
+        AddCell(root, _topList, 1, 1);
+        AddCell(root, _midList, 2, 1);
+        AddCell(root, _baseList, 3, 1);
+        AddCell(root, _recipeBox, 4, 1);
+
+        // Row 2 — bottle size (under carrier), scent-profile chips (under the
+        // note columns), and the action buttons (under the recipe).
+        AddCell(root, _bottleList, 0, 2);
+
+        var profile = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
+        profile.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        profile.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        profile.Controls.Add(BuildCategoryRow(OilCatalog.Families, _familyLabels), 0, 0);
+        profile.Controls.Add(BuildCategoryRow(OilCatalog.Effects, _effectLabels), 0, 1);
+        root.Controls.Add(profile, 1, 2);
+        root.SetColumnSpan(profile, 3);
+
+        var actions = new FlowLayoutPanel
         {
-            string effect = OilCatalog.Effects[i];
-            var lbl = NewCategoryLabel(effect, effectX[i], 14, 94);
-            _effectLabels[effect] = lbl;
-            effectPanel.Controls.Add(lbl);
-        }
-        Controls.Add(effectPanel);
+            Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = true,
+        };
+        foreach (var b in new[] { _resetBtn, _copyBtn, _printBtn, _saveBtn })
+            actions.Controls.Add(b);
+        root.Controls.Add(actions, 4, 2);
 
-        // Action buttons.
-        Place(_resetBtn, 639, 488, 50, 50);
-        Place(_copyBtn, 708, 488, 50, 50);
-        Place(_printBtn, 764, 488, 50, 50);
-        Place(_saveBtn, 820, 488, 50, 50);
+        Controls.Add(root);
 
         _toolTip.SetToolTip(_createBtn, "Build the recipe from your selections.");
         _toolTip.SetToolTip(_printBtn, "Print recipe to printer.");
@@ -313,11 +326,22 @@ public sealed class MainForm : Form
         return string.Concat(Enumerable.Range(0, 6).Select(_ => chars[Random.Shared.Next(chars.Length)]));
     }
 
-    private void Place(Control c, int x, int y, int w, int h)
+    private static void AddCell(TableLayoutPanel host, Control c, int column, int row)
     {
-        c.Location = new Point(x, y);
-        c.Size = new Size(w, h);
-        Controls.Add(c);
+        c.Dock = DockStyle.Fill;
+        host.Controls.Add(c, column, row);
+    }
+
+    private FlowLayoutPanel BuildCategoryRow(IReadOnlyList<string> names, Dictionary<string, Label> sink)
+    {
+        var row = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = true };
+        foreach (string name in names)
+        {
+            var lbl = NewCategoryLabel(name);
+            sink[name] = lbl;
+            row.Controls.Add(lbl);
+        }
+        return row;
     }
 
     private static ListBox NewOilList() => new()
@@ -331,10 +355,10 @@ public sealed class MainForm : Form
         Text = text, TextAlign = ContentAlignment.MiddleCenter, UseVisualStyleBackColor = true,
     };
 
-    private static Label NewCategoryLabel(string text, int x, int y, int width) => new()
+    private static Label NewCategoryLabel(string text) => new()
     {
         Text = text, BorderStyle = BorderStyle.FixedSingle, TextAlign = ContentAlignment.MiddleCenter,
-        Location = new Point(x, y), Size = new Size(width, 26),
+        AutoSize = true, Padding = new Padding(10, 5, 10, 5), Margin = new Padding(3),
     };
 
     private static Button NewActionButton(string? imageFile, string fallbackText)
@@ -344,6 +368,7 @@ public sealed class MainForm : Form
             Font = new Font("Segoe UI", 9F),
             MinimumSize = new Size(50, 50),
             MaximumSize = new Size(50, 50),
+            Margin = new Padding(3),
             UseVisualStyleBackColor = true,
         };
         Image? img = imageFile is null ? null : TryLoadImage(imageFile);
